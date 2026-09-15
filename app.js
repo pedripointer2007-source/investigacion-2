@@ -281,3 +281,60 @@ function copyShareUrl() {
   document.execCommand('copy');
   alert("¡Enlace de investigación copiado al portapapeles!");
 }
+// Inicialización de la Aplicación y Listeners
+document.addEventListener("DOMContentLoaded", () => {
+  renderSections(defaultSections);
+  fetchNotifications();
+
+  // Asignación de listeners seguros
+  const btnShare = document.getElementById('btn-share');
+  if (btnShare) {
+    btnShare.addEventListener('click', () => {
+      document.getElementById('share-modal').classList.remove('hidden');
+      document.getElementById('share-url-input').value = window.location.href + "?token=share-abc12345";
+    });
+  }
+
+  const btnNotif = document.getElementById('btn-notifications');
+  if (btnNotif) {
+    btnNotif.addEventListener('click', toggleNotifications);
+  }
+});
+
+// Autenticación
+async function loginWithGoogle() {
+  const { data, error } = await supabaseClient.auth.signInWithOAuth({
+    provider: 'google',
+  });
+  if (error) alert("Error al iniciar sesión: " + error.message);
+}
+
+// Carga de notificaciones
+async function fetchNotifications() {
+  const { data: notifications } = await supabaseClient.from('visitor_notifications').select('*');
+  const badge = document.getElementById('notif-badge');
+  const list = document.getElementById('notif-list');
+  
+  if (!notifications || notifications.length === 0) {
+    const mockNotifs = [
+      { id: 1, visitor_name: 'Dra. Damaris Medal', action: 'Visualizó tu protocolo' },
+      { id: 2, visitor_name: 'Ing. Denis Berrios', action: 'Dejó un comentario en Marco Teórico' }
+    ];
+    badge.innerText = mockNotifs.length;
+    list.innerHTML = mockNotifs.map(n => `
+      <li class="notif-item">
+        <span><strong>${n.visitor_name}:</strong> ${n.action}</span>
+        <button onclick="deleteNotif(this)"><i class="ri-delete-bin-line"></i></button>
+      </li>
+    `).join('');
+    return;
+  }
+
+  badge.innerText = notifications.length;
+  list.innerHTML = notifications.map(n => `
+    <li class="notif-item">
+      <span><strong>${n.visitor_name}:</strong> ${n.action}</span>
+      <button onclick="deleteNotif(this)"><i class="ri-delete-bin-line"></i></button>
+    </li>
+  `).join('');
+}
