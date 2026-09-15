@@ -1,9 +1,9 @@
-// Configuración de Supabase
+// Configuración de Supabase (Sintaxis corregida usando window.supabase)
 const SUPABASE_URL = 'https://cfpsmdmwiujstkqvrgsp.supabase.co';
 const SUPABASE_KEY = 'sb_publishable_z06IelSQA5cVUsS56eroPg_dWBmPHUG';
-const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-// Adaptación de las 9 Fases Académicas de la Investigación de Pedro
+// Adaptación de las 9 Fases Académicas
 const defaultSections = [
   {
     id: "sec-1",
@@ -26,7 +26,7 @@ const defaultSections = [
     themeClass: "theme-2",
     content: `
       <h3>Descripción de la Problemática</h3>
-      <p>La transición hacia microservicios en contenedores ha incrementado la huella energética en centros de datos. La falta de visibilidad del costo energético directo en decisiones de software (consultas ineficientes, contenedores zombies en iddle) provoca consumo innecesario de watts y costos financieros elevados.</p>
+      <p>La transición hacia microservicios en contenedores ha incrementado la huella energética en centros de datos. La falta de visibilidad del costo energético directo en decisiones de software provoca consumo innecesario de watts y costos financieros elevados.</p>
       <h3>Pregunta Principal de Investigación</h3>
       <p><em>"¿Cuáles son los patrones de consumo energético y el perfil de uso de recursos de hardware en aplicaciones de microservicios desplegadas en servidores bajo diferentes cargas de trabajo e itinerarios de optimización?"</em></p>
     `
@@ -56,9 +56,6 @@ const defaultSections = [
       <p><strong>Green Computing:</strong> Murugesan (2008) define las prácticas de informática verde enfocadas en software eficiente para reducir ciclos de reloj y uso de memoria.</p>
       <p><strong>Microservicios y Docker:</strong> Fowler (2014) analiza el aislamiento de procesos y el impacto de contenedores subutilizados en la potencia eléctrica.</p>
       <p><strong>Telemetría e IoT:</strong> Convergencia de sensores no invasivos SCT-013 con agentes Prometheus/cAdvisor para perfilado directo de hardware/software.</p>
-      <h3>Referencias Bibliográficas</h3>
-      <p>• Fowler, M. (2014). Microservices: a definition of this new architectural term. <em>IEEE Software Journal</em>, 31(3), 24-29.</p>
-      <p>• Murugesan, S. (2008). Harnessing Green IT: Principles and practices. <em>IT Professional</em>, 10(1), 24-33.</p>
     `
   },
   {
@@ -67,7 +64,7 @@ const defaultSections = [
     themeClass: "theme-5",
     content: `
       <h3>Tipo y Enfoque de Investigación</h3>
-      <p><strong>Tipo:</strong> Descriptiva cuantitativa. Se orienta a caracterizar el comportamiento de consumo de potencia sin manipulación experimental de variables.</p>
+      <p><strong>Tipo:</strong> Descriptiva cuantitativa.</p>
       <p><strong>Enfoque:</strong> Cuantitativo, basado en telemetría continua e intervalos de corriente lecturas en tiempo real.</p>
     `
   },
@@ -79,11 +76,6 @@ const defaultSections = [
       <h3>Población y Muestra</h3>
       <p><strong>Población:</strong> Microservicios y contenedores Docker en el clúster de servidores del laboratorio.</p>
       <p><strong>Muestra:</strong> Muestreo no probabilístico de 5 microservicios clave (Autenticación, Catálogo, Pagos, Notificaciones y Logs).</p>
-      <h3>Instrumentos Técnicos</h3>
-      <ul>
-        <li><strong>Hardware:</strong> Sensores de corriente SCT-013 integrados con microcontrolador ESP32.</li>
-        <li><strong>Software:</strong> Prometheus, Grafana y agente cAdvisor.</li>
-      </ul>
     `
   },
   {
@@ -104,7 +96,6 @@ const defaultSections = [
     themeClass: "theme-8",
     content: `
       <p><strong>Protección de Datos:</strong> Registro exclusivo de métricas de infraestructura sin capturar datos sensibles de usuarios.</p>
-      <p><strong>Sostenibilidad Ambiental:</strong> Protocolo diseñado para minimizar pruebas de estrés innecesarias y evitar desperdicio eléctrico.</p>
     `
   },
   {
@@ -112,19 +103,36 @@ const defaultSections = [
     title: "9. Matriz de Operacionalización e Instrumentos",
     themeClass: "theme-9",
     content: `
-      <p>Matriz de variables (Consumo en Watts, Porcentaje de CPU/RAM, Tasa de Peticiones/seg) integrada con la ficha de observación técnica automatizada.</p>
+      <p>Matriz de variables integrada con la ficha de observación técnica automatizada.</p>
     `
   }
 ];
 
-// Inicialización de la Aplicación
+// Inicialización de Eventos al Cargar el DOM
 document.addEventListener("DOMContentLoaded", () => {
   renderSections(defaultSections);
   fetchNotifications();
+
+  // Listener para el botón de Compartir
+  const btnShare = document.getElementById('btn-share');
+  if (btnShare) {
+    btnShare.addEventListener('click', () => {
+      document.getElementById('share-modal').classList.remove('hidden');
+      document.getElementById('share-url-input').value = window.location.href + "?token=share-abc12345";
+    });
+  }
+
+  // Listener para el botón de Notificaciones
+  const btnNotif = document.getElementById('btn-notifications');
+  if (btnNotif) {
+    btnNotif.addEventListener('click', toggleNotifications);
+  }
 });
 
+// Renderizado de Bento Grid
 function renderSections(sections) {
   const grid = document.getElementById("bento-grid");
+  if (!grid) return;
   grid.innerHTML = "";
   
   sections.forEach((sec, idx) => {
@@ -152,7 +160,7 @@ function renderSections(sections) {
   });
 }
 
-// Editor de Texto Enriquecido
+// Editor de Texto
 function execCmd(command, value = null) {
   document.execCommand(command, false, value);
 }
@@ -175,84 +183,112 @@ function addNewSection() {
   renderSections(defaultSections);
 }
 
-// Autenticación con Google vía Supabase
+// Agregar Comentario
+function addComment(secId) {
+  const input = document.getElementById(`input-${secId}`);
+  const list = document.getElementById(`comments-list-${secId}`);
+  if (input && input.value.trim() !== '') {
+    const item = document.createElement('div');
+    item.className = 'comment-item';
+    item.innerHTML = `<strong>Tú:</strong> ${input.value}`;
+    list.appendChild(item);
+    input.value = '';
+  }
+}
+
+// Supabase - Autenticación con Google
 async function loginWithGoogle() {
-  const { data, error } = await supabase.auth.signInWithOAuth({
+  const { data, error } = await supabaseClient.auth.signInWithOAuth({
     provider: 'google',
   });
   if (error) alert("Error al iniciar sesión: " + error.message);
 }
 
-// Gestión de Notificaciones de Visitas
+// Supabase - Gestión de Notificaciones
 async function fetchNotifications() {
-  const { data: notifications } = await supabase.from('visitor_notifications').select('*');
   const badge = document.getElementById('notif-badge');
   const list = document.getElementById('notif-list');
-  
-  if (!notifications || notifications.length === 0) {
-    // Datos simulados iniciales si la tabla está vacía
-    const mockNotifs = [
-      { id: 1, visitor_name: 'Dra. Damaris Medal', action: 'Visualizó tu protocolo' },
-      { id: 2, visitor_name: 'Ing. Denis Berrios', action: 'Dejó un comentario en Marco Teórico' }
-    ];
-    badge.innerText = mockNotifs.length;
-    list.innerHTML = mockNotifs.map(n => `
+  if (!badge || !list) return;
+
+  try {
+    const { data: notifications, error } = await supabaseClient.from('visitor_notifications').select('*');
+    
+    if (error || !notifications || notifications.length === 0) {
+      const mockNotifs = [
+        { id: 1, visitor_name: 'Dra. Damaris Medal', action: 'Visualizó tu protocolo' },
+        { id: 2, visitor_name: 'Ing. Denis Berrios', action: 'Dejó un comentario en Marco Teórico' }
+      ];
+      badge.innerText = mockNotifs.length;
+      list.innerHTML = mockNotifs.map(n => `
+        <li class="notif-item">
+          <span><strong>${n.visitor_name}:</strong> ${n.action}</span>
+          <button onclick="deleteNotif(this)"><i class="ri-delete-bin-line"></i></button>
+        </li>
+      `).join('');
+      return;
+    }
+
+    badge.innerText = notifications.length;
+    list.innerHTML = notifications.map(n => `
       <li class="notif-item">
         <span><strong>${n.visitor_name}:</strong> ${n.action}</span>
         <button onclick="deleteNotif(this)"><i class="ri-delete-bin-line"></i></button>
       </li>
     `).join('');
-    return;
+  } catch (err) {
+    console.error("Error al cargar notificaciones:", err);
   }
-
-  badge.innerText = notifications.length;
-  list.innerHTML = notifications.map(n => `
-    <li class="notif-item">
-      <span><strong>${n.visitor_name}:</strong> ${n.action}</span>
-      <button onclick="deleteNotifBD('${n.id}', this)"><i class="ri-delete-bin-line"></i></button>
-    </li>
-  `).join('');
 }
 
 function deleteNotif(btnElement) {
   btnElement.parentElement.remove();
   const badge = document.getElementById('notif-badge');
-  badge.innerText = Math.max(0, parseInt(badge.innerText) - 1);
+  if (badge) {
+    badge.innerText = Math.max(0, parseInt(badge.innerText || '0') - 1);
+  }
 }
 
 function toggleNotifications() {
-  document.getElementById('notifications-panel').classList.toggle('hidden');
+  const panel = document.getElementById('notifications-panel');
+  if (panel) panel.classList.toggle('hidden');
 }
 
-// Funciones de Exportación Multiformato
+// Exportación
 function exportPDF() {
   const element = document.getElementById('investigation-canvas');
-  const opt = {
-    margin: 10,
-    filename: 'Protocolo_Investigacion_Pedro_Valverde.pdf',
-    image: { type: 'jpeg', quality: 0.98 },
-    html2canvas: { scale: 2 },
-    jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
-  };
-  html2pdf().set(opt).from(element).save();
+  if (typeof html2pdf !== 'undefined') {
+    html2pdf().set({
+      margin: 10,
+      filename: 'Protocolo_Investigacion_Pedro_Valverde.pdf',
+      image: { type: 'jpeg', quality: 0.98 },
+      html2canvas: { scale: 2 },
+      jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+    }).from(element).save();
+  } else {
+    alert("Cargando librería PDF, reintenta en un segundo.");
+  }
 }
 
 function exportPNG() {
   const element = document.getElementById('investigation-canvas');
-  html2canvas(element).then(canvas => {
-    const link = document.createElement('a');
-    link.download = 'Investigacion_BentoGrid.png';
-    link.href = canvas.toDataURL();
-    link.click();
-  });
+  if (typeof html2canvas !== 'undefined') {
+    html2canvas(element).then(canvas => {
+      const link = document.createElement('a');
+      link.download = 'Investigacion_BentoGrid.png';
+      link.href = canvas.toDataURL();
+      link.click();
+    });
+  }
 }
 
 function exportPPT() {
-  let pptx = new PptxGenJS();
-  let slide = pptx.addSlide();
-  slide.addText("Defensa de Monografía: Monitoreo IoT & Green IT", { x: 1, y: 1, fontSize: 24, color: "363636", bold: true });
-  slide.addText("Pedro Ismael Valverde Zapata - INATEC León", { x: 1, y: 2, fontSize: 16, color: "5B8E7D" });
-  pptx.writeFile({ fileName: "Presentacion_Defensa_Investigacion.pptx" });
+  if (typeof PptxGenJS !== 'undefined') {
+    let pptx = new PptxGenJS();
+    let slide = pptx.addSlide();
+    slide.addText("Defensa de Monografía: Monitoreo IoT & Green IT", { x: 1, y: 1, fontSize: 24, color: "363636", bold: true });
+    slide.addText("Pedro Ismael Valverde Zapata - INATEC León", { x: 1, y: 2, fontSize: 16, color: "5B8E7D" });
+    pptx.writeFile({ fileName: "Presentacion_Defensa_Investigacion.pptx" });
+  }
 }
 
 function exportWord() {
@@ -265,12 +301,6 @@ function exportWord() {
   a.click();
 }
 
-// Modal para Compartir
-document.getElementById('btn-share').onclick = () => {
-  document.getElementById('share-modal').classList.remove('hidden');
-  document.getElementById('share-url-input').value = window.location.href + "?token=share-abc12345";
-};
-
 function closeShareModal() {
   document.getElementById('share-modal').classList.add('hidden');
 }
@@ -280,61 +310,4 @@ function copyShareUrl() {
   input.select();
   document.execCommand('copy');
   alert("¡Enlace de investigación copiado al portapapeles!");
-}
-// Inicialización de la Aplicación y Listeners
-document.addEventListener("DOMContentLoaded", () => {
-  renderSections(defaultSections);
-  fetchNotifications();
-
-  // Asignación de listeners seguros
-  const btnShare = document.getElementById('btn-share');
-  if (btnShare) {
-    btnShare.addEventListener('click', () => {
-      document.getElementById('share-modal').classList.remove('hidden');
-      document.getElementById('share-url-input').value = window.location.href + "?token=share-abc12345";
-    });
-  }
-
-  const btnNotif = document.getElementById('btn-notifications');
-  if (btnNotif) {
-    btnNotif.addEventListener('click', toggleNotifications);
-  }
-});
-
-// Autenticación
-async function loginWithGoogle() {
-  const { data, error } = await supabaseClient.auth.signInWithOAuth({
-    provider: 'google',
-  });
-  if (error) alert("Error al iniciar sesión: " + error.message);
-}
-
-// Carga de notificaciones
-async function fetchNotifications() {
-  const { data: notifications } = await supabaseClient.from('visitor_notifications').select('*');
-  const badge = document.getElementById('notif-badge');
-  const list = document.getElementById('notif-list');
-  
-  if (!notifications || notifications.length === 0) {
-    const mockNotifs = [
-      { id: 1, visitor_name: 'Dra. Damaris Medal', action: 'Visualizó tu protocolo' },
-      { id: 2, visitor_name: 'Ing. Denis Berrios', action: 'Dejó un comentario en Marco Teórico' }
-    ];
-    badge.innerText = mockNotifs.length;
-    list.innerHTML = mockNotifs.map(n => `
-      <li class="notif-item">
-        <span><strong>${n.visitor_name}:</strong> ${n.action}</span>
-        <button onclick="deleteNotif(this)"><i class="ri-delete-bin-line"></i></button>
-      </li>
-    `).join('');
-    return;
-  }
-
-  badge.innerText = notifications.length;
-  list.innerHTML = notifications.map(n => `
-    <li class="notif-item">
-      <span><strong>${n.visitor_name}:</strong> ${n.action}</span>
-      <button onclick="deleteNotif(this)"><i class="ri-delete-bin-line"></i></button>
-    </li>
-  `).join('');
 }
