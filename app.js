@@ -197,9 +197,13 @@ function addComment(secId) {
 }
 
 // Supabase - Autenticación con Google
+// Supabase - Autenticación con Google (Redirección dinámica)
 async function loginWithGoogle() {
   const { data, error } = await supabaseClient.auth.signInWithOAuth({
     provider: 'google',
+    options: {
+      redirectTo: window.location.origin
+    }
   });
   if (error) alert("Error al iniciar sesión: " + error.message);
 }
