@@ -108,24 +108,25 @@ const defaultSections = [
   }
 ];
 
-// Inicialización de Eventos al Cargar el DOM
-document.addEventListener("DOMContentLoaded", () => {
-  renderSections(defaultSections);
-  fetchNotifications();
-
-    // Verificar sesión en Supabase
-  const { data: { session } } = await supabaseClient.auth.getSession();
-  
-  if (session) {
-    // Usuario autenticado: Mostrar proyecto y cargar datos
-    document.getElementById('welcome-screen')?.classList.add('hidden');
-    document.getElementById('investigation-canvas')?.classList.remove('hidden');
-    renderSections(defaultSections);
-    fetchNotifications();
-  } else {
-    // Usuario no autenticado: Mostrar pantalla de bienvenida
-    document.getElementById('welcome-screen')?.classList.remove('hidden');
-    document.getElementById('investigation-canvas')?.classList.add('hidden');
+// Inicialización de Eventos al Cargar el DOM (Definido como ASYNC)
+document.addEventListener("DOMContentLoaded", async () => {
+  // Verificar sesión activa en Supabase
+  try {
+    const { data: { session } } = await supabaseClient.auth.getSession();
+    
+    if (session) {
+      // Usuario autenticado: Mostrar proyecto y cargar datos
+      document.getElementById('welcome-screen')?.classList.add('hidden');
+      document.getElementById('investigation-canvas')?.classList.remove('hidden');
+      renderSections(defaultSections);
+      fetchNotifications();
+    } else {
+      // Usuario no autenticado: Mostrar pantalla de bienvenida
+      document.getElementById('welcome-screen')?.classList.remove('hidden');
+      document.getElementById('investigation-canvas')?.classList.add('hidden');
+    }
+  } catch (err) {
+    console.error("Error al comprobar la sesión:", err);
   }
 
   // Escuchar cambios de estado (Login / Logout)
@@ -139,8 +140,8 @@ document.addEventListener("DOMContentLoaded", () => {
   const btnShare = document.getElementById('btn-share');
   if (btnShare) {
     btnShare.addEventListener('click', () => {
-      document.getElementById('share-modal').classList.remove('hidden');
-      document.getElementById('share-url-input').value = window.location.href + "?token=share-abc12345";
+      document.getElementById('share-modal')?.classList.remove('hidden');
+      generateShareUrl();
     });
   }
 
@@ -182,27 +183,15 @@ function renderSections(sections) {
   });
 }
 
-// Editor de Texto
-function execCmd(command, value = null) {
-  document.execCommand(command, false, value);
-}
-
-function insertImage() {
-  const url = prompt("Introduce la URL de la imagen:");
-  if (url) execCmd('insertImage', url);
-}
-
-function addNewSection() {
-  const title = prompt("Título de la nueva sección:", "Sección Adicional");
-  if (!title) return;
-  const newSec = {
-    id: `sec-${Date.now()}`,
-    title: title,
-    themeClass: "theme-1",
-    content: "<p>Escribe el contenido aquí...</p>"
-  };
-  defaultSections.push(newSec);
-  renderSections(defaultSections);
+// Supabase - Autenticación con Google (Redirección dinámica)
+async function loginWithGoogle() {
+  const { data, error } = await supabaseClient.auth.signInWithOAuth({
+    provider: 'google',
+    options: {
+      redirectTo: window.location.origin
+    }
+  });
+  if (error) alert("Error al iniciar sesión: " + error.message);
 }
 
 // Agregar Comentario
@@ -216,18 +205,6 @@ function addComment(secId) {
     list.appendChild(item);
     input.value = '';
   }
-}
-
-// Supabase - Autenticación con Google
-// Supabase - Autenticación con Google (Redirección dinámica)
-async function loginWithGoogle() {
-  const { data, error } = await supabaseClient.auth.signInWithOAuth({
-    provider: 'google',
-    options: {
-      redirectTo: window.location.origin
-    }
-  });
-  if (error) alert("Error al iniciar sesión: " + error.message);
 }
 
 // Supabase - Gestión de Notificaciones
@@ -279,7 +256,29 @@ function toggleNotifications() {
   if (panel) panel.classList.toggle('hidden');
 }
 
-// Exportación
+// Compartir enlace
+function generateShareUrl() {
+  const role = document.getElementById('share-permission')?.value || 'view_comment';
+  const baseUrl = window.location.origin + window.location.pathname;
+  const shareUrl = `${baseUrl}?mode=${role}&token=${btoa(role + '-access')}`;
+  const input = document.getElementById('share-url-input');
+  if (input) input.value = shareUrl;
+}
+
+function copyShareUrl() {
+  const input = document.getElementById('share-url-input');
+  if (input) {
+    input.select();
+    document.execCommand('copy');
+    alert("¡Enlace de investigación copiado al portapapeles!");
+  }
+}
+
+function closeShareModal() {
+  document.getElementById('share-modal')?.classList.add('hidden');
+}
+
+// Funciones de Exportación
 function exportPDF() {
   const element = document.getElementById('investigation-canvas');
   if (typeof html2pdf !== 'undefined') {
@@ -317,43 +316,20 @@ function exportPPT() {
     slide.addText("Defensa de Monografía: Monitoreo IoT & Green IT", { x: 1, y: 1, fontSize: 24, color: "363636", bold: true });
     slide.addText("Pedro Ismael Valverde Zapata - INATEC León", { x: 1, y: 2, fontSize: 16, color: "5B8E7D" });
     pptx.writeFile({ fileName: "Presentacion_Defensa_Investigacion.pptx" });
+  } else {
+    alert("Error: La librería PptxGenJS no está cargada.");
   }
 }
 
 function exportWord() {
-  const content = document.getElementById('investigation-canvas').innerText;
-  const blob = new Blob(['\ufeff' + content], { type: 'application/msword' });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = 'Protocolo_Investigacion_Pedro_Valverde.doc';
-  a.click();
-}
-
-function closeShareModal() {
-  document.getElementById('share-modal').classList.add('hidden');
-}
-
-function copyShareUrl() {
-  const input = document.getElementById('share-url-input');
-  input.select();
-  document.execCommand('copy');
-  alert("¡Enlace de investigación copiado al portapapeles!");
-}
-
-function generateShareUrl() {
-  const role = document.getElementById('share-role').value;
-  const baseUrl = window.location.origin + window.location.pathname;
-  // Genera un parámetro token según el rol seleccionado
-  const shareUrl = `${baseUrl}?mode=${role}&token=${btoa(role + '-access')}`;
-  document.getElementById('share-url-input').value = shareUrl;
-}
-
-// Actualiza el evento al abrir el modal
-const btnShare = document.getElementById('btn-share');
-if (btnShare) {
-  btnShare.addEventListener('click', () => {
-    document.getElementById('share-modal').classList.remove('hidden');
-    generateShareUrl(); // Carga la URL con el rol por defecto
-  });
+  const element = document.getElementById('investigation-canvas');
+  if (element) {
+    const content = element.innerText;
+    const blob = new Blob(['\ufeff' + content], { type: 'application/msword' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'Protocolo_Investigacion.doc';
+    a.click();
+  }
 }
