@@ -113,6 +113,28 @@ document.addEventListener("DOMContentLoaded", () => {
   renderSections(defaultSections);
   fetchNotifications();
 
+    // Verificar sesión en Supabase
+  const { data: { session } } = await supabaseClient.auth.getSession();
+  
+  if (session) {
+    // Usuario autenticado: Mostrar proyecto y cargar datos
+    document.getElementById('welcome-screen')?.classList.add('hidden');
+    document.getElementById('investigation-canvas')?.classList.remove('hidden');
+    renderSections(defaultSections);
+    fetchNotifications();
+  } else {
+    // Usuario no autenticado: Mostrar pantalla de bienvenida
+    document.getElementById('welcome-screen')?.classList.remove('hidden');
+    document.getElementById('investigation-canvas')?.classList.add('hidden');
+  }
+
+  // Escuchar cambios de estado (Login / Logout)
+  supabaseClient.auth.onAuthStateChange((event, session) => {
+    if (event === 'SIGNED_IN') {
+      window.location.reload();
+    }
+  });
+
   // Listener para el botón de Compartir
   const btnShare = document.getElementById('btn-share');
   if (btnShare) {
@@ -261,15 +283,16 @@ function toggleNotifications() {
 function exportPDF() {
   const element = document.getElementById('investigation-canvas');
   if (typeof html2pdf !== 'undefined') {
-    html2pdf().set({
-      margin: 10,
-      filename: 'Protocolo_Investigacion_Pedro_Valverde.pdf',
-      image: { type: 'jpeg', quality: 0.98 },
-      html2canvas: { scale: 2 },
-      jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
-    }).from(element).save();
+    const opt = {
+      margin:       10,
+      filename:     'Protocolo_Investigacion.pdf',
+      image:        { type: 'jpeg', quality: 0.98 },
+      html2canvas:  { scale: 2 },
+      jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
+    };
+    html2pdf().set(opt).from(element).save();
   } else {
-    alert("Cargando librería PDF, reintenta en un segundo.");
+    alert("Error: La librería html2pdf no está cargada correctamente.");
   }
 }
 
@@ -278,10 +301,12 @@ function exportPNG() {
   if (typeof html2canvas !== 'undefined') {
     html2canvas(element).then(canvas => {
       const link = document.createElement('a');
-      link.download = 'Investigacion_BentoGrid.png';
-      link.href = canvas.toDataURL();
+      link.download = 'Investigacion_Grid.png';
+      link.href = canvas.toDataURL('image/png');
       link.click();
     });
+  } else {
+    alert("Error: La librería html2canvas no está cargada.");
   }
 }
 
@@ -314,4 +339,21 @@ function copyShareUrl() {
   input.select();
   document.execCommand('copy');
   alert("¡Enlace de investigación copiado al portapapeles!");
+}
+
+function generateShareUrl() {
+  const role = document.getElementById('share-role').value;
+  const baseUrl = window.location.origin + window.location.pathname;
+  // Genera un parámetro token según el rol seleccionado
+  const shareUrl = `${baseUrl}?mode=${role}&token=${btoa(role + '-access')}`;
+  document.getElementById('share-url-input').value = shareUrl;
+}
+
+// Actualiza el evento al abrir el modal
+const btnShare = document.getElementById('btn-share');
+if (btnShare) {
+  btnShare.addEventListener('click', () => {
+    document.getElementById('share-modal').classList.remove('hidden');
+    generateShareUrl(); // Carga la URL con el rol por defecto
+  });
 }

@@ -13,6 +13,14 @@
   <script src="https://unpkg.com/docx@8.2.2/build/index.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/pptxgenjs@3.12.0/dist/pptxgen.bundle.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <!-- HTML2PDF para exportar a PDF -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+
+<!-- HTML2Canvas para exportar a Imagen (PNG) -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+
+<!-- PptxGenJS para exportar a PowerPoint -->
+<script src="https://cdn.jsdelivr.net/gh/gitbrent/pptxgenjs@3.12.0/dist/pptxgen.bundle.js"></script>
 </head>
 <body>
 
@@ -27,7 +35,20 @@
         <i class="ri-notification-3-line"></i>
         <span id="notif-badge" class="badge">0</span>
       </button>
-      <button id="btn-share" class="btn-secondary"><i class="ri-share-line"></i> Compartir</button>
+          <div id="share-modal" class="modal hidden">
+  <div class="modal-content">
+    <h3>Compartir Investigación</h3>
+    <label for="share-role">Permisos del enlace:</label>
+    <select id="share-role" onchange="generateShareUrl()">
+      <option value="viewer">Solo Lector y Comentarios</option>
+      <option value="editor">Editor (Acceso Total)</option>
+    </select>
+    
+    <input type="text" id="share-url-input" readonly>
+    <button onclick="copyShareUrl()">Copiar Enlace</button>
+    <button onclick="closeShareModal()">Cerrar</button>
+  </div>
+</div>
       <div class="dropdown-export">
         <button class="btn-primary"><i class="ri-download-2-line"></i> Descargar <i class="ri-arrow-down-s-line"></i></button>
         <div class="dropdown-content">
@@ -52,18 +73,20 @@
     </ul>
   </div>
 
-  <!-- Barra de Herramientas Editoriales (Estilo Word / Editor Enriquecido) -->
-  <div class="editor-toolbar">
-    <button onclick="execCmd('bold')" title="Negrita"><i class="ri-bold"></i></button>
-    <button onclick="execCmd('italic')" title="Cursiva"><i class="ri-italic"></i></button>
-    <button onclick="execCmd('underline')" title="Subrayado"><i class="ri-underline"></i></button>
-    <div class="divider"></div>
-    <button onclick="execCmd('insertUnorderedList')" title="Lista de Viñetas"><i class="ri-list-unordered"></i></button>
-    <button onclick="execCmd('insertOrderedList')" title="Lista Numerada"><i class="ri-list-ordered"></i></button>
-    <div class="divider"></div>
-    <button onclick="insertImage()" title="Insertar Imagen"><i class="ri-image-add-line"></i></button>
-    <button onclick="addNewSection()" class="btn-add-sec"><i class="ri-add-line"></i> Añadir Nueva Sección</button>
-  </div>
+<!-- Vista para usuarios NO autenticados -->
+<div id="welcome-screen" class="welcome-container">
+  <h1>Bienvenido al Protocolo de Investigación</h1>
+  <p>Inicia sesión con tu cuenta de Google para acceder al contenido y avances del proyecto.</p>
+  <button onclick="loginWithGoogle()" class="btn-login">
+    <i class="ri-google-fill"></i> Iniciar Sesión con Google
+  </button>
+</div>
+
+<!-- Vista del proyecto (oculta por defecto) -->
+<main id="investigation-canvas" class="hidden">
+  <!-- Aquí va tu Bento Grid, barra de herramientas y contenido del proyecto -->
+
+  
 
   <!-- Contenedor Principal (Lienzo Bento Grid) -->
   <main class="canvas-container" id="investigation-canvas">
@@ -110,6 +133,8 @@
       </div>
     </div>
   </div>
+</main>
+  
 
   <script src="app.js"></script>
 </body>
