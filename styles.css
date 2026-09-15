@@ -277,3 +277,133 @@ button:active {
 .dropdown-content a:hover { background-color: #f1f1f1; }
 
 .hidden { display: none !important; }
+
+/* Overlay translúcido de fondo */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background-color: rgba(0, 0, 0, 0.4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+}
+
+.modal-overlay.hidden {
+  display: none !important;
+}
+
+/* Tarjeta Neobrutalista estilo Notificaciones */
+.share-modal-card {
+  background: #ffffff;
+  border: 2px solid #000000;
+  border-radius: 12px;
+  box-shadow: 4px 4px 0px #000000;
+  padding: 20px;
+  width: 90%;
+  max-width: 440px;
+  box-sizing: border-box;
+}
+
+/* Encabezado */
+.share-modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+}
+
+.share-modal-header h3 {
+  margin: 0;
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: #000000;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* Botón cerrar neobrutalista */
+.share-btn-close {
+  background: #ffffff;
+  border: 2px solid #000000;
+  border-radius: 50%;
+  width: 28px;
+  height: 28px;
+  font-size: 1.1rem;
+  font-weight: bold;
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  box-shadow: 2px 2px 0px #000000;
+}
+
+.share-btn-close:active {
+  transform: translate(2px, 2px);
+  box-shadow: 0px 0px 0px #000000;
+}
+
+/* Campos de entrada */
+.share-modal-body {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.share-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.share-field label {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: #000000;
+}
+
+.share-input {
+  width: 100%;
+  padding: 8px 12px;
+  background: #ffffff;
+  border: 2px solid #000000;
+  border-radius: 8px;
+  font-size: 0.85rem;
+  box-sizing: border-box;
+  outline: none;
+}
+
+.share-input-group {
+  display: flex;
+  gap: 8px;
+}
+
+.share-input-group input {
+  flex: 1;
+}
+
+/* Botón Copiar */
+.share-btn-copy {
+  background: #ffffff;
+  border: 2px solid #000000;
+  border-radius: 8px;
+  padding: 8px 12px;
+  font-size: 0.85rem;
+  font-weight: 700;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  white-space: nowrap;
+  box-shadow: 2px 2px 0px #000000;
+}
+
+.share-btn-copy:active {
+  transform: translate(2px, 2px);
+  box-shadow: 0px 0px 0px #000000;
+}

@@ -106,22 +106,31 @@
 
   </main>
 
-  <!-- Modal Unificado para Compartir Enlace -->
-  <div id="share-modal" class="modal hidden">
-    <div class="modal-content">
-      <div class="modal-header">
+  <!-- Modal de Compartir (Estilo Neobrutalista) -->
+  <div id="share-modal" class="modal-overlay hidden">
+    <div class="share-modal-card">
+      <div class="share-modal-header">
         <h3><i class="ri-share-forward-line"></i> Compartir Investigación</h3>
-        <button onclick="closeShareModal()" class="btn-close">&times;</button>
+        <button class="share-btn-close" onclick="closeShareModal()">×</button>
       </div>
-      <div class="modal-body">
-        <label for="share-permission">Nivel de Permiso del Enlace:</label>
-        <select id="share-permission" onchange="generateShareUrl()">
-          <option value="view_comment">Solo Lectura y Comentarios</option>
-          <option value="edit">Permitir Edición Directa</option>
-        </select>
-        <div class="share-url-box">
-          <input type="text" id="share-url-input" readonly>
-          <button onclick="copyShareUrl()"><i class="ri-file-copy-line"></i> Copiar Link</button>
+
+      <div class="share-modal-body">
+        <div class="share-field">
+          <label for="share-permission">Nivel de Permiso del Enlace:</label>
+          <select id="share-permission" class="share-input" onchange="generateShareUrl()">
+            <option value="view_comment">Solo Lectura y Comentarios</option>
+            <option value="edit">Edición Colaborativa</option>
+          </select>
+        </div>
+
+        <div class="share-field">
+          <label for="share-url-input">Enlace Público:</label>
+          <div class="share-input-group">
+            <input type="text" id="share-url-input" class="share-input" readonly placeholder="https://...">
+            <button class="share-btn-copy" onclick="copyShareUrl()">
+              <i class="ri-file-copy-line"></i> Copiar Link
+            </button>
+          </div>
         </div>
       </div>
     </div>
