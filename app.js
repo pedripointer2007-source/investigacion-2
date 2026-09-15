@@ -1,9 +1,12 @@
-// Configuración de Supabase (Sintaxis corregida usando window.supabase)
+// Configuración de Supabase
 const SUPABASE_URL = 'https://cfpsmdmwiujstkqvrgsp.supabase.co';
 const SUPABASE_KEY = 'sb_publishable_z06IelSQA5cVUsS56eroPg_dWBmPHUG';
 const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-// Adaptación de las 9 Fases Académicas
+// Correo del propietario exclusivo
+const OWNER_EMAIL = "pedripointer2007@gmail.com";
+
+// Secciones por defecto
 const defaultSections = [
   {
     id: "sec-1",
@@ -108,35 +111,72 @@ const defaultSections = [
   }
 ];
 
-// Inicialización de Eventos al Cargar el DOM (Definido como ASYNC)
+// Secciones vacías para nuevos usuarios
+const emptySections = defaultSections.map(sec => ({
+  ...sec,
+  content: `<p>Escribe aquí el contenido para tu sección...</p>`
+}));
+
+// Inicialización
 document.addEventListener("DOMContentLoaded", async () => {
-  // Verificar sesión activa en Supabase
+  const urlParams = new URLSearchParams(window.location.search);
+  const shareMode = urlParams.get('mode'); // 'view_comment' o 'edit'
+  
   try {
     const { data: { session } } = await supabaseClient.auth.getSession();
-    
-    if (session) {
-      // Usuario autenticado: Mostrar proyecto y cargar datos
+    const userEmail = session?.user?.email;
+
+    // Actualizar interfaz del botón de login/logout
+    updateAuthUI(session);
+
+    // ESCENARIO 1: Acceso vía enlace compartido por URL
+    if (shareMode) {
       document.getElementById('welcome-screen')?.classList.add('hidden');
       document.getElementById('investigation-canvas')?.classList.remove('hidden');
-      renderSections(defaultSections);
-      fetchNotifications();
-    } else {
-      // Usuario no autenticado: Mostrar pantalla de bienvenida
-      document.getElementById('welcome-screen')?.classList.remove('hidden');
-      document.getElementById('investigation-canvas')?.classList.add('hidden');
+      
+      const isEditable = shareMode === 'edit';
+      renderSections(defaultSections, isEditable);
+      configureViewForVisitor(shareMode);
+      return;
     }
+
+    // ESCENARIO 2: Propietario del Proyecto
+    if (userEmail === OWNER_EMAIL) {
+      document.getElementById('welcome-screen')?.classList.add('hidden');
+      document.getElementById('investigation-canvas')?.classList.remove('hidden');
+      renderSections(defaultSections, true);
+      fetchNotifications();
+      return;
+    }
+
+    // ESCENARIO 3: Usuario autenticado ajeno (Nuevo Proyecto en blanco)
+    if (session && userEmail !== OWNER_EMAIL) {
+      document.getElementById('welcome-screen')?.classList.add('hidden');
+      document.getElementById('investigation-canvas')?.classList.remove('hidden');
+      
+      // Limpiar portada para el nuevo usuario
+      document.getElementById('doc-title').innerText = "TITULO DE TU NUEVO PROYECTO DE INVESTIGACIÓN";
+      document.querySelector('.cover-metadata').innerHTML = `
+        <p><strong>Autor:</strong> ${session.user.user_metadata.full_name || 'Nuevo Usuario'}</p>
+        <p><strong>Asignatura:</strong> Investigación II</p>
+        <p><strong>Estado:</strong> Borrador Propio</p>
+        <p><strong>Año Académico:</strong> 2026</p>
+      `;
+      
+      renderSections(emptySections, true);
+      hideOwnerTools();
+      return;
+    }
+
+    // ESCENARIO 4: Visita anónima sin link
+    document.getElementById('welcome-screen')?.classList.remove('hidden');
+    document.getElementById('investigation-canvas')?.classList.add('hidden');
+
   } catch (err) {
-    console.error("Error al comprobar la sesión:", err);
+    console.error("Error al verificar permisos de la aplicación:", err);
   }
 
-  // Escuchar cambios de estado (Login / Logout)
-  supabaseClient.auth.onAuthStateChange((event, session) => {
-    if (event === 'SIGNED_IN') {
-      window.location.reload();
-    }
-  });
-
-  // Listener para el botón de Compartir
+  // Escuchar eventos del modal de compartir
   const btnShare = document.getElementById('btn-share');
   if (btnShare) {
     btnShare.addEventListener('click', () => {
@@ -145,15 +185,14 @@ document.addEventListener("DOMContentLoaded", async () => {
     });
   }
 
-  // Listener para el botón de Notificaciones
   const btnNotif = document.getElementById('btn-notifications');
   if (btnNotif) {
     btnNotif.addEventListener('click', toggleNotifications);
   }
 });
 
-// Renderizado de Bento Grid
-function renderSections(sections) {
+// Renderizado dinámico respetando el permiso de edición
+function renderSections(sections, canEdit) {
   const grid = document.getElementById("bento-grid");
   if (!grid) return;
   grid.innerHTML = "";
@@ -166,73 +205,104 @@ function renderSections(sections) {
         <span>${sec.title}</span>
         <div class="card-number">${idx + 1}</div>
       </div>
-      <div class="card-body" contenteditable="true" id="${sec.id}">
+      <div class="card-body" contenteditable="${canEdit}" id="${sec.id}">
         ${sec.content}
       </div>
       <div class="comments-section">
         <div class="comment-box">
-          <input type="text" id="input-${sec.id}" placeholder="Escribe un comentario o sugerencia en esta sección...">
+          <input type="text" id="input-${sec.id}" placeholder="Escribe un comentario o sugerencia...">
           <button onclick="addComment('${sec.id}')"><i class="ri-send-plane-fill"></i></button>
         </div>
         <div class="comments-list" id="comments-list-${sec.id}">
-          <div class="comment-item"><strong>Revisión Académica:</strong> Sección alineada con la norma APA 7.</div>
+          <div class="comment-item"><strong>Sistema:</strong> Sección disponible para revisión.</div>
         </div>
       </div>
     `;
     grid.appendChild(card);
   });
+
+  // Si no puede editar, bloquea la portada también
+  const title = document.getElementById('doc-title');
+  if (title) title.setAttribute('contenteditable', canEdit ? "true" : "false");
 }
 
-// Supabase - Autenticación con Google (Redirección dinámica)
+// Configuración visual para visitantes con link compartido
+function configureViewForVisitor(mode) {
+  const notifBtn = document.getElementById('btn-notifications');
+  const shareBtn = document.getElementById('btn-share');
+  
+  if (notifBtn) notifBtn.style.display = 'none';
+  if (shareBtn) shareBtn.style.display = 'none';
+
+  const badge = document.createElement('span');
+  badge.className = 'share-mode-badge';
+  badge.innerText = mode === 'edit' ? 'Modo: Edición Compartida' : 'Modo: Solo Lectura';
+  document.querySelector('.brand')?.appendChild(badge);
+}
+
+// Ocultar herramientas exclusivas del propietario
+function hideOwnerTools() {
+  const notifBtn = document.getElementById('btn-notifications');
+  if (notifBtn) notifBtn.style.display = 'none';
+}
+
+// Actualizar el estado del botón de sesión
+function updateAuthUI(session) {
+  const btnLogin = document.getElementById('btn-login');
+  if (!btnLogin) return;
+
+  if (session) {
+    btnLogin.innerHTML = `<i class="ri-logout-box-r-line"></i> Cerrar Sesión (${session.user.email.split('@')[0]})`;
+    btnLogin.onclick = async () => {
+      await supabaseClient.auth.signOut();
+      window.location.href = window.location.pathname;
+    };
+  } else {
+    btnLogin.innerHTML = `<i class="ri-google-fill"></i> Iniciar con Gmail`;
+    btnLogin.onclick = loginWithGoogle;
+  }
+}
+
+// Autenticación Supabase
 async function loginWithGoogle() {
-  const { data, error } = await supabaseClient.auth.signInWithOAuth({
+  const { error } = await supabaseClient.auth.signInWithOAuth({
     provider: 'google',
     options: {
-      redirectTo: window.location.origin
+      redirectTo: window.location.origin + window.location.pathname
     }
   });
-  if (error) alert("Error al iniciar sesión: " + error.message);
+  if (error) alert("Error al autenticar: " + error.message);
 }
 
-// Agregar Comentario
+// Agregar comentarios
 function addComment(secId) {
   const input = document.getElementById(`input-${secId}`);
   const list = document.getElementById(`comments-list-${secId}`);
   if (input && input.value.trim() !== '') {
     const item = document.createElement('div');
     item.className = 'comment-item';
-    item.innerHTML = `<strong>Tú:</strong> ${input.value}`;
+    item.innerHTML = `<strong>Visitante:</strong> ${input.value}`;
     list.appendChild(item);
     input.value = '';
   }
 }
 
-// Supabase - Gestión de Notificaciones
+// Notificaciones
 async function fetchNotifications() {
   const badge = document.getElementById('notif-badge');
   const list = document.getElementById('notif-list');
   if (!badge || !list) return;
 
   try {
-    const { data: notifications, error } = await supabaseClient.from('visitor_notifications').select('*');
+    const { data: notifications } = await supabaseClient.from('visitor_notifications').select('*');
     
-    if (error || !notifications || notifications.length === 0) {
-      const mockNotifs = [
-        { id: 1, visitor_name: 'Dra. Damaris Medal', action: 'Visualizó tu protocolo' },
-        { id: 2, visitor_name: 'Ing. Denis Berrios', action: 'Dejó un comentario en Marco Teórico' }
-      ];
-      badge.innerText = mockNotifs.length;
-      list.innerHTML = mockNotifs.map(n => `
-        <li class="notif-item">
-          <span><strong>${n.visitor_name}:</strong> ${n.action}</span>
-          <button onclick="deleteNotif(this)"><i class="ri-delete-bin-line"></i></button>
-        </li>
-      `).join('');
-      return;
-    }
+    const mockNotifs = notifications && notifications.length > 0 ? notifications : [
+      { id: 1, visitor_name: 'Dra. Damaris Medal', action: 'Visualizó tu protocolo' },
+      { id: 2, visitor_name: 'Ing. Denis Berrios', action: 'Dejó un comentario en Marco Teórico' }
+    ];
 
-    badge.innerText = notifications.length;
-    list.innerHTML = notifications.map(n => `
+    badge.innerText = mockNotifs.length;
+    list.innerHTML = mockNotifs.map(n => `
       <li class="notif-item">
         <span><strong>${n.visitor_name}:</strong> ${n.action}</span>
         <button onclick="deleteNotif(this)"><i class="ri-delete-bin-line"></i></button>
@@ -256,11 +326,11 @@ function toggleNotifications() {
   if (panel) panel.classList.toggle('hidden');
 }
 
-// Compartir enlace
+// Generar URL para compartir
 function generateShareUrl() {
   const role = document.getElementById('share-permission')?.value || 'view_comment';
   const baseUrl = window.location.origin + window.location.pathname;
-  const shareUrl = `${baseUrl}?mode=${role}&token=${btoa(role + '-access')}`;
+  const shareUrl = `${baseUrl}?mode=${role}`;
   const input = document.getElementById('share-url-input');
   if (input) input.value = shareUrl;
 }
@@ -278,20 +348,18 @@ function closeShareModal() {
   document.getElementById('share-modal')?.classList.add('hidden');
 }
 
-// Funciones de Exportación
+// Exportaciones
 function exportPDF() {
   const element = document.getElementById('investigation-canvas');
   if (typeof html2pdf !== 'undefined') {
     const opt = {
-      margin:       10,
-      filename:     'Protocolo_Investigacion.pdf',
-      image:        { type: 'jpeg', quality: 0.98 },
-      html2canvas:  { scale: 2 },
-      jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
+      margin: 10,
+      filename: 'Protocolo_Investigacion.pdf',
+      image: { type: 'jpeg', quality: 0.98 },
+      html2canvas: { scale: 2 },
+      jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
     };
     html2pdf().set(opt).from(element).save();
-  } else {
-    alert("Error: La librería html2pdf no está cargada correctamente.");
   }
 }
 
@@ -304,8 +372,6 @@ function exportPNG() {
       link.href = canvas.toDataURL('image/png');
       link.click();
     });
-  } else {
-    alert("Error: La librería html2canvas no está cargada.");
   }
 }
 
@@ -316,8 +382,6 @@ function exportPPT() {
     slide.addText("Defensa de Monografía: Monitoreo IoT & Green IT", { x: 1, y: 1, fontSize: 24, color: "363636", bold: true });
     slide.addText("Pedro Ismael Valverde Zapata - INATEC León", { x: 1, y: 2, fontSize: 16, color: "5B8E7D" });
     pptx.writeFile({ fileName: "Presentacion_Defensa_Investigacion.pptx" });
-  } else {
-    alert("Error: La librería PptxGenJS no está cargada.");
   }
 }
 
