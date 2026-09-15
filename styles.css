@@ -1,0 +1,279 @@
+:root {
+  --bg-dots: #e5e3dc;
+  --card-bg: #f9f8f3;
+  --text-color: #2b2b2b;
+  --accent-green: #5b8e7d;
+  --accent-blue: #4a7c59;
+  --accent-yellow: #d9a05b;
+  --accent-red: #c7522a;
+  --border-color: #1e1e1e;
+  --radius-lg: 18px;
+  --radius-sm: 10px;
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, Roboto, sans-serif;
+  background-color: #f2f0e9;
+  background-image: radial-gradient(#b0ad9e 1.2px, transparent 1.2px);
+  background-size: 24px 24px;
+  color: var(--text-color);
+}
+
+/* Barra superior */
+.top-bar {
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  background: rgba(249, 248, 243, 0.95);
+  backdrop-filter: blur(10px);
+  border-bottom: 2px solid var(--border-color);
+  padding: 12px 24px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-weight: 700;
+  font-size: 1.1rem;
+}
+
+.user-actions {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+
+/* Botones con sombras marcadas tipo sticker UI */
+button {
+  border: 2px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  padding: 8px 16px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: white;
+  box-shadow: 3px 3px 0px var(--border-color);
+}
+
+button:hover {
+  transform: translate(-2px, -2px);
+  box-shadow: 5px 5px 0px var(--border-color);
+}
+
+button:active {
+  transform: translate(0, 0);
+  box-shadow: 1px 1px 0px var(--border-color);
+}
+
+.btn-primary { background-color: var(--accent-green); color: white; }
+.btn-secondary { background-color: #e3d5ca; color: var(--text-color); }
+.btn-google { background-color: #ffffff; color: #444; }
+
+/* Editor Toolbar */
+.editor-toolbar {
+  max-width: 1000px;
+  margin: 15px auto;
+  background: white;
+  border: 2px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  padding: 8px 16px;
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  box-shadow: 4px 4px 0px var(--border-color);
+}
+
+.divider { width: 1.5px; height: 24px; background: #ccc; margin: 0 4px; }
+
+/* Portada Universitaria */
+.canvas-container {
+  max-width: 1050px;
+  margin: 20px auto 60px auto;
+  padding: 0 15px;
+}
+
+.cover-card {
+  background: #ffffff;
+  border: 2.5px solid var(--border-color);
+  border-radius: var(--radius-lg);
+  padding: 40px;
+  text-align: center;
+  margin-bottom: 30px;
+  box-shadow: 6px 6px 0px var(--border-color);
+}
+
+.cover-header h4 { margin: 0; font-size: 1.2rem; color: #333; }
+.cover-header h5 { margin: 5px 0; font-size: 1rem; color: #666; }
+.cover-header p { margin: 0; font-weight: bold; font-size: 0.9rem; color: var(--accent-red); }
+
+.cover-card h1 {
+  font-size: 1.6rem;
+  margin: 30px 0;
+  padding: 10px;
+  border: 1px dashed transparent;
+}
+.cover-card h1:hover { border-color: #aaa; }
+
+.cover-metadata {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  text-align: left;
+  gap: 10px;
+  margin-top: 30px;
+  background: #faf8f5;
+  padding: 20px;
+  border-radius: var(--radius-sm);
+  border: 1.5px solid var(--border-color);
+}
+
+/* Bento Grid de las 9 Secciones */
+.bento-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.bento-card {
+  background: var(--card-bg);
+  border: 2.5px solid var(--border-color);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  box-shadow: 6px 6px 0px var(--border-color);
+  transition: transform 0.2s;
+}
+
+.card-header {
+  padding: 16px 24px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 2px solid var(--border-color);
+  color: white;
+  font-weight: 700;
+}
+
+/* Temas de color pastel/tierra por sección estilo el boceto */
+.theme-1 { background-color: #5b8e7d; }
+.theme-2 { background-color: #6b818c; }
+.theme-3 { background-color: #d9a05b; }
+.theme-4 { background-color: #c7522a; }
+.theme-5 { background-color: #4a7c59; }
+.theme-6 { background-color: #6e5773; }
+.theme-7 { background-color: #e5989b; }
+.theme-8 { background-color: #b5e2fa; color: #2b2b2b; }
+.theme-9 { background-color: #edafb8; color: #2b2b2b; }
+
+.card-number {
+  background: rgba(255, 255, 255, 0.3);
+  border-radius: 50%;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1.5px solid var(--border-color);
+  font-size: 0.9rem;
+}
+
+.card-body {
+  padding: 24px;
+  min-height: 120px;
+  background: white;
+  outline: none;
+}
+
+/* Sección de Comentarios por Tarjeta */
+.comments-section {
+  background: #f4f2ec;
+  border-top: 2px solid var(--border-color);
+  padding: 16px 24px;
+}
+
+.comment-box {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.comment-box input {
+  flex: 1;
+  padding: 8px 12px;
+  border: 1.5px solid var(--border-color);
+  border-radius: var(--radius-sm);
+}
+
+.comments-list {
+  font-size: 0.88rem;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.comment-item {
+  background: white;
+  padding: 8px 12px;
+  border-radius: 6px;
+  border: 1px solid #ddd;
+}
+
+/* Menús Desplegables y Modales */
+.notifications-panel {
+  position: fixed;
+  right: 20px;
+  top: 70px;
+  width: 320px;
+  background: white;
+  border: 2.5px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  box-shadow: 6px 6px 0px var(--border-color);
+  z-index: 200;
+  padding: 16px;
+}
+
+.notif-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 0;
+  border-bottom: 1px solid #eee;
+}
+
+.badge {
+  background: var(--accent-red);
+  color: white;
+  font-size: 0.75rem;
+  padding: 2px 6px;
+  border-radius: 10px;
+}
+
+.dropdown-export { position: relative; display: inline-block; }
+.dropdown-content {
+  display: none;
+  position: absolute;
+  right: 0;
+  background-color: white;
+  min-width: 220px;
+  box-shadow: 4px 4px 0px var(--border-color);
+  border: 2px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  z-index: 101;
+}
+.dropdown-export:hover .dropdown-content { display: block; }
+.dropdown-content a {
+  color: black;
+  padding: 10px 14px;
+  text-decoration: none;
+  display: block;
+}
+.dropdown-content a:hover { background-color: #f1f1f1; }
+
+.hidden { display: none !important; }

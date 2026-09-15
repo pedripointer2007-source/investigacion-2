@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Investigación II - Plataforma de Monografía e IoT</title>
+  <link rel="stylesheet" href="styles.css">
+  <!-- Remix Icons para la interfaz -->
+  <link href="https://cdn.jsdelivr.net/npm/remixicon@3.5.0/fonts/remixicon.css" rel="stylesheet">
+  <!-- Librerías de exportación externas -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.min.js"></script>
+  <script src="https://unpkg.com/docx@8.2.2/build/index.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/pptxgenjs@3.12.0/dist/pptxgen.bundle.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body>
+
+  <!-- Barra Superior Flotante de Acciones -->
+  <header class="top-bar">
+    <div class="brand">
+      <i class="ri-article-line brand-icon"></i>
+      <span>Investigación II | Green IT & IoT</span>
+    </div>
+    <div class="user-actions">
+      <button id="btn-notifications" class="btn-icon" title="Notificaciones de visitas">
+        <i class="ri-notification-3-line"></i>
+        <span id="notif-badge" class="badge">0</span>
+      </button>
+      <button id="btn-share" class="btn-secondary"><i class="ri-share-line"></i> Compartir</button>
+      <div class="dropdown-export">
+        <button class="btn-primary"><i class="ri-download-2-line"></i> Descargar <i class="ri-arrow-down-s-line"></i></button>
+        <div class="dropdown-content">
+          <a href="#" onclick="exportPDF()"><i class="ri-file-pdf-line"></i> Documento PDF (.pdf)</a>
+          <a href="#" onclick="exportWord()"><i class="ri-file-word-line"></i> Documento Word (.docx)</a>
+          <a href="#" onclick="exportPPT()"><i class="ri-file-ppt-line"></i> Presentación PPTX (.pptx)</a>
+          <a href="#" onclick="exportPNG()"><i class="ri-image-line"></i> Captura Completa (.png)</a>
+        </div>
+      </div>
+      <button id="btn-login" class="btn-google" onclick="loginWithGoogle()"><i class="ri-google-fill"></i> Iniciar con Gmail</button>
+    </div>
+  </header>
+
+  <!-- Panel Desplegable de Notificaciones -->
+  <div id="notifications-panel" class="notifications-panel hidden">
+    <div class="notif-header">
+      <h3><i class="ri-notification-badge-line"></i> Visitas y Actividad</h3>
+      <button onclick="toggleNotifications()" class="btn-close">&times;</button>
+    </div>
+    <ul id="notif-list" class="notif-list">
+      <!-- Se pueblan dinámicamente -->
+    </ul>
+  </div>
+
+  <!-- Barra de Herramientas Editoriales (Estilo Word / Editor Enriquecido) -->
+  <div class="editor-toolbar">
+    <button onclick="execCmd('bold')" title="Negrita"><i class="ri-bold"></i></button>
+    <button onclick="execCmd('italic')" title="Cursiva"><i class="ri-italic"></i></button>
+    <button onclick="execCmd('underline')" title="Subrayado"><i class="ri-underline"></i></button>
+    <div class="divider"></div>
+    <button onclick="execCmd('insertUnorderedList')" title="Lista de Viñetas"><i class="ri-list-unordered"></i></button>
+    <button onclick="execCmd('insertOrderedList')" title="Lista Numerada"><i class="ri-list-ordered"></i></button>
+    <div class="divider"></div>
+    <button onclick="insertImage()" title="Insertar Imagen"><i class="ri-image-add-line"></i></button>
+    <button onclick="addNewSection()" class="btn-add-sec"><i class="ri-add-line"></i> Añadir Nueva Sección</button>
+  </div>
+
+  <!-- Contenedor Principal (Lienzo Bento Grid) -->
+  <main class="canvas-container" id="investigation-canvas">
+
+    <!-- Presentación Universitaria Integrada -->
+    <div class="cover-card">
+      <div class="cover-header">
+        <h4>INATEC - CENTRO TECNOLÓGICO JUAN DE DIOS MUÑOZ REYES</h4>
+        <h5>LEÓN, NICARAGUA</h5>
+        <p>DEPARTAMENTO DE COMPUTACIÓN Y SISTEMAS</p>
+      </div>
+      <h1 contenteditable="true" id="doc-title">ANÁLISIS DESCRIPTIVO DEL IMPACTO DEL DISEÑO DE SOFTWARE Y GESTIÓN DE MICROSERVICIOS EN EL CONSUMO DE ENERGÍA ELÉCTRICA MEDIANTE MONITOREO IOT EN INFRAESTRUCTURA DE SERVIDORES</h1>
+      <div class="cover-metadata">
+        <p><strong>Autor:</strong> Pedro Ismael Valverde Zapata</p>
+        <p><strong>Asignatura:</strong> Investigación II</p>
+        <p><strong>Docente Tutor:</strong> Ing. Denis Berrios / Dra. Damaris Medal</p>
+        <p><strong>Año Académico:</strong> 2026</p>
+      </div>
+    </div>
+
+    <!-- Contenedor dinámico de las 9 secciones estándar -->
+    <div id="bento-grid" class="bento-grid">
+      <!-- Se generan mediante Javascript con las 9 fases adaptadas -->
+    </div>
+  </main>
+
+  <!-- Modal para Compartir Enlace y Ajustar Permisos -->
+  <div id="share-modal" class="modal hidden">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3><i class="ri-share-forward-line"></i> Compartir Investigación</h3>
+        <button onclick="closeShareModal()" class="btn-close">&times;</button>
+      </div>
+      <div class="modal-body">
+        <label>Nivel de Permiso del Enlace:</label>
+        <select id="share-permission" onchange="updateSharePermission()">
+          <option value="view_comment">Solo Lectura y Comentarios</option>
+          <option value="edit">Permitir Edición Directa</option>
+        </select>
+        <div class="share-url-box">
+          <input type="text" id="share-url-input" readonly>
+          <button onclick="copyShareUrl()"><i class="ri-file-copy-line"></i> Copiar Link</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
