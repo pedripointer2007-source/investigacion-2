@@ -5,40 +5,48 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Investigación II - Plataforma de Monografía e IoT</title>
   
-  <!-- Hojas de estilo -->
   <link rel="stylesheet" href="styles.css">
   <link href="https://cdn.jsdelivr.net/npm/remixicon@3.5.0/fonts/remixicon.css" rel="stylesheet">
   
-  <!-- SDK de Supabase -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  
-  <!-- Librerías de exportación externas -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
   <script src="https://cdn.jsdelivr.net/gh/gitbrent/pptxgenjs@3.12.0/dist/pptxgen.bundle.js"></script>
 </head>
 <body>
 
-  <!-- Barra Superior Flotante de Acciones -->
+  <!-- Barra Superior Flotante -->
   <header class="top-bar">
     <div class="brand">
       <i class="ri-article-line brand-icon"></i>
-      <span>Investigación II | Green IT & IoT</span>
+      <span>Plataforma de Investigación II</span>
     </div>
     
     <div class="user-actions">
-      <!-- Botón de Notificaciones -->
-      <button id="btn-notifications" class="btn-icon" title="Notificaciones de visitas">
+      <!-- Menú Desplegable Archivo -->
+      <div class="dropdown-export">
+        <button class="btn-secondary">
+          <i class="ri-file-3-line"></i> Archivo <i class="ri-arrow-down-s-line"></i>
+        </button>
+        <div class="dropdown-content">
+          <a href="#" onclick="createNewProject()"><i class="ri-file-add-line"></i> Nuevo Proyecto</a>
+          <a href="#" onclick="openDashboard()"><i class="ri-folder-open-line"></i> Abrir Proyecto...</a>
+          <a href="#" onclick="saveCurrentProject()"><i class="ri-save-3-line"></i> Guardar Cambios</a>
+        </div>
+      </div>
+
+      <!-- Botón Notificaciones -->
+      <button id="btn-notifications" class="btn-icon" title="Notificaciones" onclick="toggleNotifications()">
         <i class="ri-notification-3-line"></i>
         <span id="notif-badge" class="badge">0</span>
       </button>
 
-      <!-- Botón de Compartir -->
+      <!-- Botón Compartir -->
       <button id="btn-share" class="btn-secondary">
         <i class="ri-share-line"></i> Compartir
       </button>
 
-      <!-- Menú Desplegable de Exportación -->
+      <!-- Menú Exportación -->
       <div class="dropdown-export">
         <button class="btn-primary">
           <i class="ri-download-2-line"></i> Descargar <i class="ri-arrow-down-s-line"></i>
@@ -51,92 +59,130 @@
         </div>
       </div>
 
-      <!-- Botón de Autenticación -->
-      <button id="btn-login" class="btn-google" onclick="loginWithGoogle()">
-        <i class="ri-google-fill"></i> Iniciar con Gmail
-      </button>
+      <!-- Botón de Perfil de Usuario / Login -->
+      <div id="auth-container">
+        <button id="btn-login" class="btn-google" onclick="loginWithGoogle()">
+          <i class="ri-google-fill"></i> Iniciar con Gmail
+        </button>
+      </div>
     </div>
   </header>
 
   <!-- Panel Desplegable de Notificaciones -->
   <div id="notifications-panel" class="notifications-panel hidden">
     <div class="notif-header">
-      <h3><i class="ri-notification-badge-line"></i> Visitas y Actividad</h3>
+      <h3><i class="ri-notification-badge-line"></i> Actividad Reciente</h3>
       <button onclick="toggleNotifications()" class="btn-close">&times;</button>
     </div>
-    <ul id="notif-list" class="notif-list">
-      <!-- Se pueblan dinámicamente desde JS -->
-    </ul>
+    <ul id="notif-list" class="notif-list"></ul>
+    <div class="notif-footer">
+      <button class="btn-secondary full-width" onclick="markAllNotificationsAsRead()">
+        <i class="ri-check-double-line"></i> Marcar todas como vistas
+      </button>
+    </div>
   </div>
 
-  <!-- Vista para usuarios NO autenticados -->
+  <!-- Pantalla de Bienvenida (Visita Anónima) -->
   <div id="welcome-screen" class="welcome-container">
-    <h1>Bienvenido al Protocolo de Investigación</h1>
-    <p>Inicia sesión con tu cuenta de Google para acceder al contenido y avances del proyecto.</p>
+    <h1>Plataforma Gestionada de Protocolos de Investigación</h1>
+    <p>Crea, edita y gestiona tu protocolo académico en tiempo real. Inicia sesión para empezar.</p>
     <button onclick="loginWithGoogle()" class="btn-login">
       <i class="ri-google-fill"></i> Iniciar Sesión con Google
     </button>
   </div>
 
-  <!-- Vista del proyecto (Oculta hasta iniciar sesión) -->
+  <!-- Lienzo Principal del Proyecto -->
   <main id="investigation-canvas" class="canvas-container hidden">
-
-    <!-- Portada Académica -->
+    <!-- Portada Académica Genérica -->
     <div class="cover-card">
       <div class="cover-header">
-        <h4>INATEC - CENTRO TECNOLÓGICO JUAN DE DIOS MUÑOZ REYES</h4>
-        <h5>LEÓN, NICARAGUA</h5>
-        <p>DEPARTAMENTO DE COMPUTACIÓN Y SISTEMAS</p>
+        <h4 contenteditable="true" id="inst-name">CENTRO EDUCATIVO / INSTITUCIÓN ACADÉMICA</h4>
+        <h5 contenteditable="true" id="inst-location">CIUDAD, PAÍS</h5>
+        <p contenteditable="true" id="inst-dept">DEPARTAMENTO O FACULTAD</p>
       </div>
-      <h1 contenteditable="true" id="doc-title">
-        ANÁLISIS DESCRIPTIVO DEL IMPACTO DEL DISEÑO DE SOFTWARE Y GESTIÓN DE MICROSERVICIOS EN EL CONSUMO DE ENERGÍA ELÉCTRICA MEDIANTE MONITOREO IOT EN INFRAESTRUCTURA DE SERVIDORES
-      </h1>
+      <h1 contenteditable="true" id="doc-title">TITULO DEL PROYECTO DE INVESTIGACIÓN</h1>
       <div class="cover-metadata">
-        <p><strong>Autor:</strong> Pedro Ismael Valverde Zapata</p>
-        <p><strong>Asignatura:</strong> Investigación II</p>
-        <p><strong>Docente Tutor:</strong> Ing. Denis Berrios / Dra. Damaris Medal</p>
-        <p><strong>Año Académico:</strong> 2026</p>
+        <p><strong>Autor:</strong> <span contenteditable="true" id="author-name">Nombre del Estudiante</span></p>
+        <p><strong>Asignatura:</strong> <span contenteditable="true" id="subject-name">Investigación II</span></p>
+        <p><strong>Docente Tutor:</strong> <span contenteditable="true" id="tutor-name">Nombre del Tutor</span></p>
+        <p><strong>Año Académico:</strong> <span contenteditable="true" id="academic-year">2026</span></p>
       </div>
     </div>
 
-    <!-- Contenedor dinámico de las 9 secciones (Bento Grid) -->
-    <div id="bento-grid" class="bento-grid">
-      <!-- Se genera mediante app.js -->
-    </div>
-
+    <!-- Bento Grid Generado Dinámicamente -->
+    <div id="bento-grid" class="bento-grid"></div>
   </main>
 
-  <!-- Modal de Compartir (Estilo Neobrutalista) -->
+  <!-- Modal de Compartir -->
   <div id="share-modal" class="modal-overlay hidden">
     <div class="share-modal-card">
       <div class="share-modal-header">
         <h3><i class="ri-share-forward-line"></i> Compartir Investigación</h3>
         <button class="share-btn-close" onclick="closeShareModal()">×</button>
       </div>
-
       <div class="share-modal-body">
         <div class="share-field">
           <label for="share-permission">Nivel de Permiso del Enlace:</label>
-          <select id="share-permission" class="share-input" onchange="generateShareUrl()">
+          <select id="share-permission" class="share-input" onchange="updateSharePermission()">
             <option value="view_comment">Solo Lectura y Comentarios</option>
             <option value="edit">Edición Colaborativa</option>
           </select>
         </div>
-
         <div class="share-field">
           <label for="share-url-input">Enlace Público:</label>
           <div class="share-input-group">
-            <input type="text" id="share-url-input" class="share-input" readonly placeholder="https://...">
-            <button class="share-btn-copy" onclick="copyShareUrl()">
-              <i class="ri-file-copy-line"></i> Copiar Link
-            </button>
+            <input type="text" id="share-url-input" class="share-input" readonly>
+            <button class="share-btn-copy" onclick="copyShareUrl()"><i class="ri-file-copy-line"></i> Copiar Link</button>
           </div>
         </div>
       </div>
     </div>
   </div>
 
-  <!-- Código principal de la aplicación -->
+  <!-- Modal de Perfil de Usuario y Dashboard -->
+  <div id="profile-modal" class="modal-overlay hidden">
+    <div class="share-modal-card dashboard-card">
+      <div class="share-modal-header">
+        <h3><i class="ri-user-settings-line"></i> Mi Perfil y Dashboard</h3>
+        <button class="share-btn-close" onclick="closeProfileModal()">×</button>
+      </div>
+      
+      <div class="profile-header-section">
+        <div class="avatar-container">
+          <img id="user-avatar-img" src="https://via.placeholder.com/80" alt="Avatar">
+          <label for="avatar-input" class="avatar-upload-btn"><i class="ri-camera-fill"></i></label>
+          <input type="file" id="avatar-input" accept="image/*" onchange="uploadAvatar(event)" class="hidden">
+        </div>
+        <div class="profile-details">
+          <h4 id="profile-user-name">Usuario Autenticado</h4>
+          <p id="profile-user-email">correo@dominio.com</p>
+        </div>
+      </div>
+
+      <hr class="modal-divider">
+
+      <div class="dashboard-stats">
+        <div class="stat-box">
+          <span class="stat-number" id="stat-projects">0</span>
+          <span class="stat-label">Proyectos</span>
+        </div>
+        <div class="stat-box">
+          <span class="stat-number" id="stat-views">0</span>
+          <span class="stat-label">Visitas Totales</span>
+        </div>
+        <div class="stat-box">
+          <span class="stat-number" id="stat-comments">0</span>
+          <span class="stat-label">Comentarios</span>
+        </div>
+      </div>
+
+      <h4>Mis Proyectos de Investigación</h4>
+      <div id="user-projects-list" class="projects-list-container">
+        <!-- Proyectos cargados dinámicamente -->
+      </div>
+    </div>
+  </div>
+
   <script src="app.js"></script>
 </body>
 </html>
