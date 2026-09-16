@@ -12,6 +12,10 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
   <script src="https://cdn.jsdelivr.net/gh/gitbrent/pptxgenjs@3.12.0/dist/pptxgen.bundle.js"></script>
+  <!-- Mammoth.js para extraer texto de archivos Word (.docx) -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js"></script>
+  <!-- PDF.js para extraer texto de archivos PDF -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
 </head>
 <body>
 
@@ -39,6 +43,11 @@
       <button id="btn-notifications" class="btn-icon" title="Notificaciones" onclick="toggleNotifications()">
         <i class="ri-notification-3-line"></i>
         <span id="notif-badge" class="badge">0</span>
+      </button>
+
+      <!-- Botón Permiso de Notificaciones Emergentes -->
+      <button id="btn-push-permission" class="btn-icon" title="Activar Notificaciones Push" onclick="requestNotificationPermission()">
+        <i class="ri-notification-badge-line"></i>
       </button>
 
       <!-- Botón Compartir -->
@@ -89,6 +98,28 @@
     <button onclick="loginWithGoogle()" class="btn-login">
       <i class="ri-google-fill"></i> Iniciar Sesión con Google
     </button>
+  </div>
+
+  <!-- Barra de Herramientas de Edición Estilo Word -->
+  <div id="editor-toolbar" class="editor-toolbar hidden">
+    <button onclick="formatDoc('bold')" title="Negrita"><i class="ri-bold"></i></button>
+    <button onclick="formatDoc('italic')" title="Cursiva"><i class="ri-italic"></i></button>
+    <button onclick="formatDoc('underline')" title="Subrayado"><i class="ri-underline"></i></button>
+    <button onclick="formatDoc('strikeThrough')" title="Tachado"><i class="ri-strikethrough"></i></button>
+    <div class="divider"></div>
+    <button onclick="formatDoc('justifyLeft')" title="Alinear Izquierda"><i class="ri-align-left"></i></button>
+    <button onclick="formatDoc('justifyCenter')" title="Centrar"><i class="ri-align-center"></i></button>
+    <button onclick="formatDoc('justifyRight')" title="Alinear Derecha"><i class="ri-align-right"></i></button>
+    <button onclick="formatDoc('justifyFull')" title="Justificar"><i class="ri-align-justify"></i></button>
+    <div class="divider"></div>
+    <button onclick="formatDoc('insertUnorderedList')" title="Lista con Viñetas"><i class="ri-list-unordered"></i></button>
+    <button onclick="formatDoc('insertOrderedList')" title="Lista Numerada"><i class="ri-list-ordered"></i></button>
+    <div class="divider"></div>
+    <!-- Carga e Importación Autoconvertible de Documentos -->
+    <label for="doc-import-input" class="btn-toolbar-import" title="Importar archivo Word, PDF o Texto">
+      <i class="ri-file-upload-line"></i> Importar Documento
+    </label>
+    <input type="file" id="doc-import-input" accept=".docx, .pdf, .txt" onchange="importDocumentToTemplate(event)" class="hidden">
   </div>
 
   <!-- Lienzo Principal del Proyecto -->
@@ -180,6 +211,13 @@
       <div id="user-projects-list" class="projects-list-container">
         <!-- Proyectos cargados dinámicamente -->
       </div>
+
+      <hr class="modal-divider">
+
+      <!-- Botón de Cerrar Sesión -->
+      <button class="btn-logout full-width" onclick="logoutUser()">
+        <i class="ri-logout-box-r-line"></i> Cerrar Sesión
+      </button>
     </div>
   </div>
 

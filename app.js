@@ -2,7 +2,10 @@ const SUPABASE_URL = 'https://cfpsmdmwiujstkqvrgsp.supabase.co';
 const SUPABASE_KEY = 'sb_publishable_z06IelSQA5cVUsS56eroPg_dWBmPHUG';
 const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-// Estructura limpia por defecto de las 9 secciones para nuevos proyectos
+if (window.pdfjsLib) {
+  window.pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js';
+}
+
 const emptySectionsTemplate = [
   { id: "sec-1", title: "1. Selección y Delimitación del Tema", themeClass: "theme-1", content: "<p>Escribe aquí la delimitación y justificación de tu tema...</p>" },
   { id: "sec-2", title: "2. Planteamiento y Pregunta de Investigación", themeClass: "theme-2", content: "<p>Escribe la descripción de la problemática y la pregunta principal...</p>" },
@@ -18,6 +21,7 @@ const emptySectionsTemplate = [
 let currentProject = null;
 let currentUser = null;
 let currentRole = 'owner'; 
+let currentVisitorEmail = localStorage.getItem('visitor_email') || '';
 
 document.addEventListener("DOMContentLoaded", async () => {
   const urlParams = new URLSearchParams(window.location.search);
@@ -31,10 +35,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   if (shareToken) {
     await loadSharedProject(shareToken, shareMode);
-    return;
-  }
-
-  if (currentUser) {
+  } else if (currentUser) {
     await loadUserLatestProject();
   } else {
     document.getElementById('welcome-screen')?.classList.remove('hidden');
@@ -48,9 +49,45 @@ document.addEventListener("DOMContentLoaded", async () => {
       generateShareUrl();
     });
   }
+
+  // Comprobar estado de notificaciones push
+  checkNotificationStatus();
 });
 
-// Cargar un proyecto compartido mediante Token de la URL
+// Solicitud y manejo de permisos de Notificaciones Emergentes (Desktop & Mobile)
+function requestNotificationPermission() {
+  if (!("Notification" in window)) {
+    alert("Tu navegador no soporta notificaciones emergentes.");
+    return;
+  }
+
+  Notification.requestPermission().then(permission => {
+    if (permission === "granted") {
+      alert("¡Notificaciones emergentes activadas con éxito!");
+      showPushNotification("Investigación II", "Las notificaciones emergentes están habilitadas.");
+    } else {
+      alert("Permiso de notificaciones denegado.");
+    }
+  });
+}
+
+function checkNotificationStatus() {
+  const btn = document.getElementById('btn-push-permission');
+  if ("Notification" in window && Notification.permission === "granted" && btn) {
+    btn.style.color = "#5b8e7d";
+  }
+}
+
+function showPushNotification(title, body) {
+  if ("Notification" in window && Notification.permission === "granted") {
+    new Notification(title, {
+      body: body,
+      icon: 'https://cdn-icons-png.flaticon.com/512/3135/3135715.png'
+    });
+  }
+}
+
+// Cargar un proyecto compartido mediante Token
 async function loadSharedProject(token, mode) {
   try {
     const { data: proj, error } = await supabaseClient
@@ -67,6 +104,11 @@ async function loadSharedProject(token, mode) {
     currentProject = proj;
     currentRole = mode === 'edit' ? 'editor' : 'viewer';
 
+    if (!currentUser && !currentVisitorEmail) {
+      currentVisitorEmail = prompt("Ingresa tu correo para identificarte en los comentarios y recibir notificaciones:") || `anon_${Math.floor(Math.random()*10000)}@correo.com`;
+      localStorage.setItem('visitor_email', currentVisitorEmail);
+    }
+
     // Incrementar contador de visitas
     await supabaseClient.from('investigations')
       .update({ views_count: (proj.views_count || 0) + 1 })
@@ -75,19 +117,21 @@ async function loadSharedProject(token, mode) {
     // Registrar notificación al dueño
     await supabaseClient.from('visitor_notifications').insert([{
       owner_id: proj.user_id,
-      visitor_email: currentUser ? currentUser.email : 'Anónimo',
-      visitor_name: currentUser ? (currentUser.user_metadata.full_name || 'Visitante') : 'Visitante',
+      visitor_email: currentUser ? currentUser.email : currentVisitorEmail,
+      visitor_name: currentUser ? (currentUser.user_metadata.full_name || 'Usuario') : currentVisitorEmail.split('@')[0],
       action: mode === 'edit' ? 'Accedió en modo edición' : 'Visualizó el proyecto'
     }]);
 
     renderProjectToCanvas(proj, currentRole === 'editor');
     configureVisitorUI(mode);
+    fetchNotifications();
+    setupRealtimeSubscriptions();
   } catch (e) {
     console.error("Error al cargar proyecto compartido:", e);
   }
 }
 
-// Cargar el último proyecto del usuario autenticado
+// Cargar el último proyecto del propietario
 async function loadUserLatestProject() {
   document.getElementById('welcome-screen')?.classList.add('hidden');
   document.getElementById('investigation-canvas')?.classList.remove('hidden');
@@ -101,22 +145,28 @@ async function loadUserLatestProject() {
   if (projects && projects.length > 0) {
     currentProject = projects[0];
   } else {
-    // Si es un usuario totalmente nuevo, crear su primer proyecto en blanco
     await createNewProject(false);
   }
 
   renderProjectToCanvas(currentProject, true);
   fetchNotifications();
+  setupRealtimeSubscriptions();
 }
 
-// Renderizado del proyecto en el DOM
+// Renderizado del lienzo
 function renderProjectToCanvas(project, canEdit) {
   document.getElementById('welcome-screen')?.classList.add('hidden');
   document.getElementById('investigation-canvas')?.classList.remove('hidden');
 
+  const toolbar = document.getElementById('editor-toolbar');
+  if (canEdit) {
+    toolbar?.classList.remove('hidden');
+  } else {
+    toolbar?.classList.add('hidden');
+  }
+
   document.getElementById('doc-title').innerText = project.title || "TITULO DEL PROYECTO";
   
-  // Rellenar las secciones
   const grid = document.getElementById("bento-grid");
   if (!grid) return;
   grid.innerHTML = "";
@@ -153,10 +203,60 @@ function renderProjectToCanvas(project, canEdit) {
   });
 }
 
-// Guardar el proyecto actual en Supabase
+// Formateador Estilo Word (execCommand)
+function formatDoc(cmd, value = null) {
+  document.execCommand(cmd, false, value);
+}
+
+// Importar Archivos PDF / Word / TXT e Inyectarlos en las Plantillas
+async function importDocumentToTemplate(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+
+  const fileName = file.name.toLowerCase();
+  let extractedText = "";
+
+  try {
+    if (fileName.endsWith('.docx')) {
+      const arrayBuffer = await file.arrayBuffer();
+      const result = await mammoth.extractRawText({ arrayBuffer: arrayBuffer });
+      extractedText = result.value;
+    } else if (fileName.endsWith('.pdf')) {
+      const arrayBuffer = await file.arrayBuffer();
+      const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+      for (let i = 1; i <= pdf.numPages; i++) {
+        const page = await pdf.getPage(i);
+        const textContent = await page.getTextContent();
+        extractedText += textContent.items.map(item => item.str).join(' ') + '\n';
+      }
+    } else if (fileName.endsWith('.txt')) {
+      extractedText = await file.text();
+    }
+
+    if (!extractedText.trim()) {
+      alert("No se pudo extraer texto del archivo.");
+      return;
+    }
+
+    // Distribuir dinámicamente el texto importado en los bloques del proyecto
+    const chunks = extractedText.match(/[\s\S]{1,500}/g) || [extractedText];
+    emptySectionsTemplate.forEach((sec, idx) => {
+      const el = document.getElementById(sec.id);
+      if (el && chunks[idx]) {
+        el.innerHTML = `<p>${chunks[idx].replace(/\n/g, '<br>')}</p>`;
+      }
+    });
+
+    alert("¡Documento procesado e importado con éxito a la plantilla!");
+  } catch (err) {
+    console.error("Error al procesar el documento:", err);
+    alert("Ocurrió un error al leer el archivo.");
+  }
+}
+
+// Guardar Cambios
 async function saveCurrentProject() {
-  if (!currentUser) return alert("Debes iniciar sesión para guardar cambios.");
-  if (currentRole === 'viewer') return alert("No tienes permisos de edición en este proyecto.");
+  if (!currentUser && currentRole !== 'editor') return alert("No tienes permisos de edición en este proyecto.");
 
   const sections = [];
   emptySectionsTemplate.forEach(sec => {
@@ -178,24 +278,22 @@ async function saveCurrentProject() {
       updated_at: new Date()
     }).eq('id', currentProject.id);
 
-    if (!error) alert("¡Proyecto guardado con éxito!");
-  } else {
-    const { data, error } = await supabaseClient.from('investigations').insert([{
-      user_id: currentUser.id,
-      title: title,
-      sections: sections
-    }]).select().single();
-
-    if (!error && data) {
-      currentProject = data;
-      alert("¡Nuevo proyecto creado y guardado con éxito!");
+    if (!error) {
+      alert("¡Proyecto guardado con éxito!");
+      // Notificar a los visitantes/colaboradores que el autor modificó la obra
+      await supabaseClient.from('visitor_notifications').insert([{
+        owner_id: currentProject.user_id,
+        visitor_email: 'Todos',
+        visitor_name: 'Propietario',
+        action: `Actualizó el contenido del proyecto: "${title}"`
+      }]);
     }
   }
 }
 
-// Crear un proyecto totalmente nuevo
+// Crear Nuevo Proyecto
 async function createNewProject(confirmDialog = true) {
-  if (confirmDialog && !confirm("¿Deseas crear un nuevo proyecto en blanco? Se cargarán las plantillas por defecto.")) return;
+  if (confirmDialog && !confirm("¿Deseas crear un nuevo proyecto en blanco?")) return;
 
   currentProject = {
     title: "NUEVO PROTOCOLO DE INVESTIGACIÓN",
@@ -208,7 +306,7 @@ async function createNewProject(confirmDialog = true) {
   }
 }
 
-// Cargar Comentarios
+// Cargar Comentarios con opción de respuestas anidadas
 async function loadCommentsForSection(secId) {
   if (!currentProject?.id) return;
   const list = document.getElementById(`comments-list-${secId}`);
@@ -221,30 +319,77 @@ async function loadCommentsForSection(secId) {
     .eq('section_id', secId)
     .order('created_at', { ascending: true });
 
-  list.innerHTML = (comments || []).map(c => `
-    <div class="comment-item"><strong>${c.user_name}:</strong> ${c.comment_text}</div>
-  `).join('');
+  if (!comments) return;
+
+  const parents = comments.filter(c => !c.parent_id);
+  const replies = comments.filter(c => c.parent_id);
+
+  list.innerHTML = parents.map(c => {
+    const childReplies = replies.filter(r => r.parent_id === c.id);
+    return `
+      <div class="comment-item" id="comment-${c.id}">
+        <div class="comment-header-text"><strong>${c.user_name}:</strong> ${c.comment_text}</div>
+        <button class="btn-reply-link" onclick="showReplyBox('${c.id}')"><i class="ri-reply-line"></i> Responder</button>
+        
+        <div id="reply-box-${c.id}" class="reply-box hidden">
+          <input type="text" id="reply-input-${c.id}" placeholder="Escribe una respuesta...">
+          <button onclick="addComment('${secId}', '${c.id}', '${c.user_email}')"><i class="ri-send-plane-fill"></i></button>
+        </div>
+
+        <div class="replies-container">
+          ${childReplies.map(r => `
+            <div class="comment-item reply-item">
+              <strong>${r.user_name}:</strong> ${r.comment_text}
+            </div>
+          `).join('')}
+        </div>
+      </div>
+    `;
+  }).join('');
 }
 
-// Enviar Comentario
-async function addComment(secId) {
-  const input = document.getElementById(`input-${secId}`);
+function showReplyBox(commentId) {
+  document.getElementById(`reply-box-${commentId}`)?.classList.toggle('hidden');
+}
+
+// Enviar Comentario o Respuesta
+async function addComment(secId, parentId = null, parentAuthorEmail = null) {
+  let input;
+  if (parentId) {
+    input = document.getElementById(`reply-input-${parentId}`);
+  } else {
+    input = document.getElementById(`input-${secId}`);
+  }
+
   if (!input || !input.value.trim()) return;
 
   const commentText = input.value.trim();
-  const userName = currentUser ? (currentUser.user_metadata.full_name || currentUser.email) : 'Visitante';
-  const userEmail = currentUser ? currentUser.email : 'anonimo@correo.com';
+  const userName = currentUser ? (currentUser.user_metadata.full_name || currentUser.email) : (currentVisitorEmail.split('@')[0] || 'Visitante');
+  const userEmail = currentUser ? currentUser.email : currentVisitorEmail;
 
   if (currentProject?.id) {
-    await supabaseClient.from('section_comments').insert([{
+    const payload = {
       investigation_id: currentProject.id,
       section_id: secId,
       user_email: userEmail,
       user_name: userName,
       comment_text: commentText
-    }]);
+    };
 
-    if (currentProject.user_id !== currentUser?.id) {
+    if (parentId) payload.parent_id = parentId;
+
+    await supabaseClient.from('section_comments').insert([payload]);
+
+    // Notificaciones cruzadas (Dueño -> Visitante o Visitante -> Dueño)
+    if (parentId && parentAuthorEmail) {
+      await supabaseClient.from('visitor_notifications').insert([{
+        owner_id: currentProject.user_id,
+        recipient_email: parentAuthorEmail,
+        visitor_email: userEmail,
+        visitor_name: userName,
+        action: `Respondió a tu comentario en el proyecto`
+      }]);
+    } else if (currentProject.user_id !== currentUser?.id) {
       await supabaseClient.from('visitor_notifications').insert([{
         owner_id: currentProject.user_id,
         visitor_email: userEmail,
@@ -258,18 +403,20 @@ async function addComment(secId) {
   }
 }
 
-// Gestión de Notificaciones
+// Notificaciones y Bandeja Bidireccional
 async function fetchNotifications() {
-  if (!currentUser) return;
   const badge = document.getElementById('notif-badge');
   const list = document.getElementById('notif-list');
 
-  const { data: notifs } = await supabaseClient
-    .from('visitor_notifications')
-    .select('*')
-    .eq('owner_id', currentUser.id)
-    .eq('is_read', false)
-    .order('created_at', { ascending: false });
+  let query = supabaseClient.from('visitor_notifications').select('*').eq('is_read', false);
+
+  if (currentUser) {
+    query = query.or(`owner_id.eq.${currentUser.id},recipient_id.eq.${currentUser.id},recipient_email.eq.${currentUser.email}`);
+  } else if (currentVisitorEmail) {
+    query = query.or(`recipient_email.eq.${currentVisitorEmail},visitor_email.eq.Todos`);
+  }
+
+  const { data: notifs } = await query.order('created_at', { ascending: false });
 
   if (badge) badge.innerText = notifs ? notifs.length : 0;
   if (list) {
@@ -282,16 +429,34 @@ async function fetchNotifications() {
 }
 
 async function markAllNotificationsAsRead() {
-  if (!currentUser) return;
+  const targetEmail = currentUser ? currentUser.email : currentVisitorEmail;
+  if (!targetEmail) return;
+
   await supabaseClient.from('visitor_notifications')
     .update({ is_read: true })
-    .eq('owner_id', currentUser.id);
+    .or(`owner_id.eq.${currentUser?.id},recipient_email.eq.${targetEmail}`);
 
   fetchNotifications();
 }
 
 function toggleNotifications() {
   document.getElementById('notifications-panel')?.classList.toggle('hidden');
+}
+
+// Escuchador en Tiempo Real para Cambios y Comentarios (Realtime)
+function setupRealtimeSubscriptions() {
+  if (!currentProject?.id) return;
+
+  supabaseClient
+    .channel('project-updates')
+    .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'visitor_notifications' }, payload => {
+      fetchNotifications();
+      showPushNotification("Nueva Notificación", `${payload.new.visitor_name}: ${payload.new.action}`);
+    })
+    .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'section_comments' }, payload => {
+      loadCommentsForSection(payload.new.section_id);
+    })
+    .subscribe();
 }
 
 // Dashboard y Modal de Perfil
@@ -308,7 +473,7 @@ async function openDashboard() {
     document.getElementById('user-avatar-img').src = profile.avatar_url;
   }
 
-  // Cargar Proyectos del usuario y estadísticas
+  // Cargar Estadísticas
   const { data: projects } = await supabaseClient.from('investigations').select('*').eq('user_id', currentUser.id);
   
   let totalViews = 0;
@@ -368,11 +533,19 @@ async function uploadAvatar(e) {
   }
 }
 
+// Cerrar Sesión
+async function logoutUser() {
+  await supabaseClient.auth.signOut();
+  currentUser = null;
+  localStorage.removeItem('visitor_email');
+  window.location.href = window.location.origin + window.location.pathname;
+}
+
 function closeProfileModal() {
   document.getElementById('profile-modal')?.classList.add('hidden');
 }
 
-// Configuración de interfaz compartida
+// Compartir Enlace
 function generateShareUrl() {
   if (!currentProject) return;
   const permission = document.getElementById('share-permission').value;
@@ -392,7 +565,7 @@ function copyShareUrl() {
   if (input) {
     input.select();
     document.execCommand('copy');
-    alert("¡Enlace de proyecto copiado al portapapeles!");
+    alert("¡Enlace copiado al portapapeles!");
   }
 }
 
@@ -401,14 +574,13 @@ function closeShareModal() {
 }
 
 function configureVisitorUI(mode) {
-  document.getElementById('btn-notifications').style.display = 'none';
   const badge = document.createElement('span');
   badge.className = 'share-mode-badge';
   badge.innerText = mode === 'edit' ? 'Modo: Edición Compartida' : 'Modo: Solo Lectura';
   document.querySelector('.brand')?.appendChild(badge);
 }
 
-// Login
+// Autenticación Google
 function updateAuthUI(session) {
   const container = document.getElementById('auth-container');
   if (!container) return;
@@ -435,7 +607,7 @@ async function loginWithGoogle() {
   });
 }
 
-// Exportación
+// Exportación a formatos documentales
 function exportPDF() {
   const element = document.getElementById('investigation-canvas');
   if (typeof html2pdf !== 'undefined') {
